@@ -1,0 +1,9 @@
+#sh files
+*.sh
+
+#notes
+notes.ipynb
+
+#txt files
+
+*.txt

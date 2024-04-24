@@ -1,8 +1,0 @@
-#run
-bsub < jobscript.sh
-
-#check jobscript
-bjobs
-
-# kill
-bkill job_id
