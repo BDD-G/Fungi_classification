@@ -27,7 +27,7 @@ warnings.filterwarnings('ignore')
 # Import helper scripts
 import sys
 sys.path.append('/zhome/ac/d/174101/thesis')
-from utlis.ResNet import ResNet
+from utils.ResNet import ResNet
 from utils.Hyperparams import Hyperparams
 from utils.train import  train, evaluate
 
@@ -83,23 +83,17 @@ def epoch_time(start_time, end_time):
 
 data_transforms = {
     'train': v2.Compose([
-        LBP(radius=1, n_points=8),
-        v2.Resize((224,224)),
-        v2.PILToTensor(),
+        v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        v2.Normalize([0.7306, 0.6204, 0.5511], [0.1087, 0.1948, 0.1759])
     ]),
     'test': v2.Compose([
-        LBP(radius=1, n_points=8),
-        v2.Resize((224,224)),
-        v2.PILToTensor(),
+        v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        v2.Normalize([0.7288, 0.6202, 0.5511], [0.1076, 0.1934, 0.1758])
     ]),
     'validation': v2.Compose([
-        LBP(radius=1, n_points=8),
-        v2.Resize((224,224)),
-        v2.PILToTensor(),
+        v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
@@ -144,18 +138,10 @@ if not isExist:
     print("Created trained_models.csv")
 
 # Hyperparameters
-hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml")
+
+hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("base"))
 
 train_start_datetime = datetime.now()
-
-
-num_epochs = hyperparams.epochs
-batch_size = hyperparams.batch_size
-lr = hyperparams.lr
-early_stopping_patience = 10
-optimizer = hyperparams.optimizer_class(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
-loss_fn = hyperparams.loss_fn
 
 # Metric scores
 metrics_score = [0.0, 0.0, 0.0, 0.0, 0.0]
@@ -166,9 +152,10 @@ precision_epoch = []
 acc_epoch = []
 
 # Define the data directory
-data_dir = Path(img_path) / 'data_split'
+data_dir = Path(img_path) / 'data_split_resized'
 
 # Create data loaders
+batch_size = hyperparams.batch_size
 image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
 
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
@@ -181,6 +168,14 @@ class_names = image_datasets['train'].classes
 architecture = 'resnet50'
 num_classes = len(class_names)
 model = load_model_ResNet(architecture) #use architecture for training a full model
+
+# Hyperparameters
+num_epochs = hyperparams.epochs
+lr = hyperparams.lr
+early_stopping_patience = 10
+optimizer = hyperparams.optimizer_class(model.parameters(), lr=lr)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
+loss_fn = hyperparams.loss_fn
 
 # Move the model to the GPU if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -212,8 +207,8 @@ for epoch in range(num_epochs):
     if test_loss < best_test_loss:
         torch.save(model.state_dict(), checkpoint_path)
 
-    if epoch % 5 == 4:
-        clear_output(wait=True)
+    #if epoch % 5 == 4:
+        #clear_output(wait=True)
 
     if test_loss < best_test_loss:
         data_str = f"Valid loss improved from {best_test_loss:2.4f} to {test_loss:2.4f}. Saving checkpoint: {checkpoint_path}"
@@ -341,4 +336,4 @@ def plot_training(training_losses,
 
 
 fig = plot_training(train_losses, test_losses, gaussian=True, sigma=1, figsize=(4,4))
-plt.savefig(str(hyperparams.model_name())+'.jpg')
+plt.savefig('/zhome/ac/d/174101/thesis/plots/'+str(hyperparams.model_name())+'.jpg')

@@ -1,14 +1,14 @@
 import toml
 from pathlib import Path
 import sys
-sys.path.append('/content/drive/MyDrive/Colab Notebooks/Thesis')
-from utils.loss import DiceBCELoss, DiceLoss, IoULoss, BCElossFuntion, CrossEntropy
+sys.path.append('/zhome/ac/d/174101/thesis')
+from utils.loss import DiceBCELoss, DiceLoss, IoULoss, BCElossFuntion, CrossEntropy, NLL, KLDiv
 from torch.nn import BCELoss, CrossEntropyLoss, NLLLoss
 import torch.nn as nn
 from torch.optim import Adam, RMSprop, SGD, NAdam
 
 class Hyperparams:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, preprocessing: str):
         toml_dict = toml.load(path)
 
         # To tune
@@ -17,10 +17,11 @@ class Hyperparams:
         self.lr = toml_dict['lr']
         self.optimizer = toml_dict['optimizer']
         self.loss = toml_dict['loss']
+        self.preprocessing = preprocessing
 
     def model_name(self):
         formatted_lr = "{:.3e}".format(self.lr)
-        return f"fungi_model_B{self.batch_size}_E{self.epochs}_lr{formatted_lr}_{self.optimizer}_{self.loss}.pth"
+        return f"fungi_model_{self.preprocessing}_B{self.batch_size}_E{self.epochs}_lr{formatted_lr}_{self.optimizer}_{self.loss}.pth"
 
     # using property decorator
     # a loss getter function
@@ -29,9 +30,9 @@ class Hyperparams:
         if self.loss == "CrossEntropy":
             return CrossEntropyLoss()
         if self.loss == "NLL":
-            return NLLLoss()
+            return NLL()
         if self.loss == "KLDIV":
-            return nn.KLDivLoss(reduction = 'mean')
+            return KLDiv()
         if self.loss == "BCE":
             return nn.BCEWithLogitsLoss()
 
@@ -50,7 +51,7 @@ class Hyperparams:
 
 if __name__ == "__main__":
     #base_path = Path(__file__).parent.parent
-    base_path = '/content/drive/MyDrive/Colab Notebooks/Thesis'
+    base_path = '/zhome/ac/d/174101/thesis/data'
     h = Hyperparams(base_path / 'train_conf.toml')
 
     print(h.model_name())

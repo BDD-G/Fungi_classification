@@ -16,10 +16,13 @@ def train(model, loader, optimizer, loss_fn, device):
     pbar = tqdm(enumerate(loader), 'Training', total=len(loader),leave=False)
     
     for x, y in loader:
-        x = x.to(device, dtype=torch.float32)
+        #x = x.to(device, dtype=torch.float32)
+        x = x.to(device)
+
         #y = y.to(device, dtype=torch.float32)
-        y = y.to(device, dtype=torch.int64)
-        #Yt_train = Yt_train.type(torch.LongTensor)
+
+        #y = y.to(device, dtype=torch.int64)
+        y = y.to(device)
         optimizer.zero_grad()
         y_pred = model(x)
         loss = loss_fn(y_pred, y)
@@ -46,8 +49,8 @@ def evaluate(model, loader, loss_fn, device):
     
     with torch.no_grad():
         for x, y in loader:
-            x = x.to(device, dtype=torch.float32)
-            y = y.to(device, dtype=torch.int64)
+            x = x.to(device)
+            y = y.to(device)
 
             y_pred = model(x)
             loss = loss_fn(y_pred, y)

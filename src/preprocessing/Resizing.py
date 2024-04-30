@@ -61,40 +61,24 @@ target_paths_df['Image_number'] = target_paths_df['Image_number'].astype(int)
 target_df = target_paths_df[(target_paths_df['Image_number'] >= 48) & (target_paths_df['Image_number'] <= 168)]
 val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 192)]
 
-def apply_lbp(image_path, output_directory):
+def resize_img(image_path, output_directory):
     # Read the image
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
-    # Apply Local Binary Patterns
-    radius = 1
-    n_points = 8 * radius
-    
-    # Gaussian filter
-    image_gaussian = gaussian_filter(image, sigma=0.5)
-
-    #LBP
-    lbp_image = local_binary_pattern(image_gaussian, n_points, radius, method='uniform')
+    image = cv2.imread(image_path)
     
     # Resize
-    resized_image = resize(lbp_image, (224,224), anti_aliasing=True)
+    resized_image = resize(image, (224,224), anti_aliasing=True)
 
-    # Artifilical RGB
-    x = np.stack([resized_image] * 3, axis=-1)
-
-    # [0,1] Range
-    pseudo_rgb_image = (x-np.min(x))/(np.max(x)-np.min(x))
-
-    # [0,255] Range
-    lbp_image_unit8 = (pseudo_rgb_image*255).astype(np.uint8)
+    # [0,255] range
+    resized_image_unit8 = (resized_image*255).astype(np.uint8)
     
     # Get the file name
     file_name = image_path.split('/')[-1]
     
     # Save the processed image
     output_path = join(output_directory, file_name)
-    cv2.imwrite(output_path, lbp_image_unit8)
+    cv2.imwrite(output_path, resized_image_unit8)
 
-base = Path(f"{img_path}/data_split_lbp")
+base = Path(f"{img_path}/data_split_resized")
 base.mkdir(exist_ok=True)
 
 # Create train-test split folders
@@ -112,7 +96,7 @@ test_dst.mkdir(exist_ok=True)
 val_dst.mkdir(exist_ok=True)
 
 # Iterate through each row in the DataFrame
-def copy_lbp(df, dst_folder):
+def copy_resized(df, dst_folder):
     counter = 0
     for index, row in df.iterrows():
         image_path = row['path']
@@ -121,7 +105,7 @@ def copy_lbp(df, dst_folder):
         target_dst.mkdir(exist_ok=True)
 
         # Apply LBP and save the processed image
-        apply_lbp(image_path, target_dst)
+        resize_img(image_path, target_dst)
         # Progress counter
         counter += 1
         print(f'Image number: {counter} out of {len(df['Image_number'])}')
@@ -130,13 +114,13 @@ train_df, test_df = train_test_split(target_df, test_size=0.3, random_state=42)
 print('copying...')
 
 # Copy images to train directory
-copy_lbp(train_df, train_dst)
+copy_resized(train_df, train_dst)
 print('train images copy finished')
 
 # Copy images to test directory
-copy_lbp(test_df, test_dst)
+copy_resized(test_df, test_dst)
 print('test images copy finished')
 
 # Copy images to validation directory
-#copy_lbp(val_df, val_dst)
+copy_resized(val_df, val_dst)
 print('validation images copy finished')

@@ -1,9 +1,8 @@
-#sh files
+# files
 *.sh
-
-#notes
+*.txt
+*.err
+*.out
+# notes
 notes.ipynb
 
-#txt files
-
-*.txt
