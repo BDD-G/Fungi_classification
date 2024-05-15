@@ -59,7 +59,7 @@ target_paths_df['Image_number'] = target_paths_df['path'].apply(lambda x: x.spli
 target_paths_df['Image_number'] = target_paths_df['Image_number'].str.replace(r'\D', '', regex=True)
 target_paths_df['Image_number'] = target_paths_df['Image_number'].astype(int)
 target_df = target_paths_df[(target_paths_df['Image_number'] >= 48) & (target_paths_df['Image_number'] <= 168)]
-val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 192)]
+val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 191)]
 
 def resize_img(image_path, output_directory):
     # Read the image
@@ -86,9 +86,9 @@ train_dst = base / "train"
 test_dst = base / "test"
 val_dst = base / "validation"
 
-shutil.rmtree(train_dst)
-shutil.rmtree(test_dst)
-shutil.rmtree(val_dst)
+#shutil.rmtree(train_dst)
+#shutil.rmtree(test_dst)
+#shutil.rmtree(val_dst)
 print('Directories removed')
 
 train_dst.mkdir(exist_ok=True)
@@ -114,11 +114,11 @@ train_df, test_df = train_test_split(target_df, test_size=0.3, random_state=42)
 print('copying...')
 
 # Copy images to train directory
-copy_resized(train_df, train_dst)
+#copy_resized(train_df, train_dst)
 print('train images copy finished')
 
 # Copy images to test directory
-copy_resized(test_df, test_dst)
+#copy_resized(test_df, test_dst)
 print('test images copy finished')
 
 # Copy images to validation directory
