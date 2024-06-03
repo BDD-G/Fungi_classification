@@ -106,11 +106,11 @@ class DenseBlock(nn.Module):
             x (tensor) : output tensor 
         """
         xin = x
-        print('xin shape',xin.shape)
+        #print('xin shape',xin.shape)
 
         for layer in self.deep_nn:
             x = layer(x)
-            print('xout shape',x.shape)
+            #print('xout shape',x.shape)
         return x
 
 class TransitionLayer(nn.Module):
@@ -143,7 +143,7 @@ class TransitionLayer(nn.Module):
         return x
     
 class DenseNet(nn.Module):
-    def __init__(self,densenet_variant,in_channels,num_classes=1000):
+    def __init__(self,densenet_variant,in_channels,num_classes):
         
         """
         Creating an initial 7x7 convolution followed by 3 DenseBlock and 3 Transition layers. Concluding this with 4th DenseBlock, 7x7 global average pool and FC layer
@@ -208,5 +208,5 @@ class DenseNet(nn.Module):
         # print(x.shape)
         return x
 
-x = torch.randn(1,3,224,224)
-model = DenseNet(model_parameters['densenet121'],3)
+#x = torch.randn(1,3,224,224)
+#model = DenseNet(model_parameters['densenet121'],3, 1000)

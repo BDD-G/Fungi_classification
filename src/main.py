@@ -30,6 +30,8 @@ sys.path.append('/zhome/ac/d/174101/thesis')
 from utils.ResNet import ResNet
 from utils.Hyperparams import Hyperparams
 from utils.train import  train, evaluate
+from utils.DenseNet import DenseNet
+from utils.CombineChannels import CombinedChannelDataset
 
 # Paths and classes
 img_path = '/work3/s220243/Thesis'
@@ -42,6 +44,11 @@ model_parameters['resnet34'] = ([64,128,256,512],[3,4,6,3],1,False)
 model_parameters['resnet50'] = ([64,128,256,512],[3,4,6,3],4,True)
 model_parameters['resnet101'] = ([64,128,256,512],[3,4,23,3],4,True)
 model_parameters['resnet152'] = ([64,128,256,512],[3,8,36,3],4,True)
+# DensNetX
+model_parameters['densenet121'] = [6,12,24,16]
+model_parameters['densenet169'] = [6,12,32,32]
+model_parameters['densenet201'] = [6,12,48,32]
+model_parameters['densenet264'] = [6,12,64,48]
 
 # Helper functions
 class LBP:
@@ -60,8 +67,22 @@ class LBP:
         pseudo_rgb_image = Image.fromarray(pseudo_rgb_image)
 
         return pseudo_rgb_image
+
+def stack_channels(dataloader1, dataloader2):
+    stacked_data = []
+    for (data1, target1), (data2, target2) in zip(dataloader1, dataloader2):
+        # Extract the first channel from data2
+        first_channel = data2[:, 0:1, :, :]  # Shape: (batch_size, 1, height, width)
+        
+        # Stack the first channel with data2
+        stacked_data_batch = torch.cat((data2, first_channel), dim=1)  # Shape: (batch_size, 4, height, width)
+        
+        # Append to list
+        stacked_data.append((stacked_data_batch, target2))
     
-def load_model_ResNet(architecture):
+    return stacked_data
+
+def load_model(architecture, model):
   if architecture == 'pretrained':
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model.fc = nn.Linear(1000, num_classes)
@@ -71,8 +92,10 @@ def load_model_ResNet(architecture):
         param.requires_grad = True
       else:
         param.requires_grad = False
-  else:
-    model = ResNet(model_parameters[architecture] , in_channels=3, num_classes=num_classes)
+  if model == "ResNet":
+    model = ResNet(model_parameters[architecture] , in_channels=4, num_classes=num_classes)
+  if model == "DenseNet":
+     model = DenseNet(model_parameters[architecture] , in_channels=4, num_classes=num_classes)
   return model    
 
 def epoch_time(start_time, end_time):
@@ -91,6 +114,24 @@ data_transforms = {
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize([0.7288, 0.6202, 0.5511], [0.1076, 0.1934, 0.1758])
+    ]),
+    'validation': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ]),
+}
+
+data_transforms_lbp = {
+    'train': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.5791, 0.5791, 0.5791], [0.2315, 0.2315, 0.2315])
+    ]),
+    'test': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.5799, 0.5799, 0.5799], [0.2307, 0.2307, 0.2307])
     ]),
     'validation': v2.Compose([
         v2.ToImage(),
@@ -138,8 +179,9 @@ if not isExist:
     print("Created trained_models.csv")
 
 # Hyperparameters
-
-hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("base"))
+model_type = "DenseNet"
+architecture = 'densenet264'
+hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("4th_channel"), str(architecture))
 
 train_start_datetime = datetime.now()
 
@@ -151,23 +193,35 @@ recall_epoch = []
 precision_epoch = []
 acc_epoch = []
 
-# Define the data directory
+# Define the base data directory
 data_dir = Path(img_path) / 'data_split_resized'
+
+# Define the lbp data directory
+data_dir_lbp = Path(img_path) / 'data_split_lbp'
+
+## Stack the 4th channel
+
+# Create the original datasets
+image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+image_datasets_lbp = {x: datasets.ImageFolder(os.path.join(data_dir_lbp, x), data_transforms_lbp[x]) for x in ['train', 'test']}
+
+# Create combined datasets
+combined_datasets = {x: CombinedChannelDataset(image_datasets[x], image_datasets_lbp[x]) for x in ['train', 'test']}
 
 # Create data loaders
 batch_size = hyperparams.batch_size
-image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+dataloaders = {x: torch.utils.data.DataLoader(combined_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
 
-dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
-dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
+# Get dataset sizes
+dataset_sizes = {x: len(combined_datasets[x]) for x in ['train', 'test']}
 print(dataset_sizes)
 
+# Class names
 class_names = image_datasets['train'].classes
 
-# Define the architecture
-architecture = 'resnet50'
+
 num_classes = len(class_names)
-model = load_model_ResNet(architecture) #use architecture for training a full model
+model = load_model(architecture, model_type) #use architecture for training a full model
 
 # Hyperparameters
 num_epochs = hyperparams.epochs

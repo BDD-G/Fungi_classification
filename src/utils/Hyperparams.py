@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.optim import Adam, RMSprop, SGD, NAdam
 
 class Hyperparams:
-    def __init__(self, path: Path, preprocessing: str):
+    def __init__(self, path: Path, preprocessing: str, model_type: str):
         toml_dict = toml.load(path)
 
         # To tune
@@ -18,10 +18,11 @@ class Hyperparams:
         self.optimizer = toml_dict['optimizer']
         self.loss = toml_dict['loss']
         self.preprocessing = preprocessing
+        self.model_type = model_type
 
     def model_name(self):
         formatted_lr = "{:.3e}".format(self.lr)
-        return f"fungi_model_{self.preprocessing}_B{self.batch_size}_E{self.epochs}_lr{formatted_lr}_{self.optimizer}_{self.loss}.pth"
+        return f"fungi_{self.model_type}_{self.preprocessing}_B{self.batch_size}_E{self.epochs}_lr{formatted_lr}_{self.optimizer}_{self.loss}.pth"
 
     # using property decorator
     # a loss getter function

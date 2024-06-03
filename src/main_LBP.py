@@ -139,7 +139,8 @@ if not isExist:
     print("Created trained_models.csv")
 
 # Hyperparameters
-hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("LBP"))
+model_type = "DenseNet"
+hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("LBP"), str(model_type))
 
 train_start_datetime = datetime.now()
 
