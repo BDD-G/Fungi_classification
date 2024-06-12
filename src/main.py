@@ -31,7 +31,7 @@ from utils.ResNet import ResNet
 from utils.Hyperparams import Hyperparams
 from utils.train import  train, evaluate
 from utils.DenseNet import DenseNet
-from utils.CombineChannels import CombinedChannelDataset
+from utils.CombineChannels import Combined5ChannelsDataset
 
 # Paths and classes
 img_path = '/work3/s220243/Thesis'
@@ -93,9 +93,9 @@ def load_model(architecture, model):
       else:
         param.requires_grad = False
   if model == "ResNet":
-    model = ResNet(model_parameters[architecture] , in_channels=4, num_classes=num_classes)
+    model = ResNet(model_parameters[architecture] , in_channels=5, num_classes=num_classes)
   if model == "DenseNet":
-     model = DenseNet(model_parameters[architecture] , in_channels=4, num_classes=num_classes)
+     model = DenseNet(model_parameters[architecture] , in_channels=5, num_classes=num_classes)
   return model    
 
 def epoch_time(start_time, end_time):
@@ -140,6 +140,24 @@ data_transforms_lbp = {
     ]),
 }
 
+data_transforms_sobel = {
+    'train': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.1082, 0.1082, 0.1082], [0.1439, 0.1439, 0.1439])
+    ]),
+    'test': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.1087, 0.1087, 0.1087], [0.1448, 0.1448, 0.1448])
+    ]),
+    'validation': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.1244, 0.1244, 0.1244], [0.1425, 0.1425, 0.1425])
+    ]),
+}
+
 # Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
@@ -179,9 +197,9 @@ if not isExist:
     print("Created trained_models.csv")
 
 # Hyperparameters
-model_type = "DenseNet"
-architecture = 'densenet264'
-hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("4th_channel"), str(architecture))
+model_type = "ResNet"
+architecture = 'resnet50'
+hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("5th_channel"), str(architecture))
 
 train_start_datetime = datetime.now()
 
@@ -199,14 +217,18 @@ data_dir = Path(img_path) / 'data_split_resized'
 # Define the lbp data directory
 data_dir_lbp = Path(img_path) / 'data_split_lbp'
 
-## Stack the 4th channel
+# Define the sobel data directory
+data_dir_sobel = Path(img_path) / 'data_split_sobel'
+
+## Stack 4th and 5th channel
 
 # Create the original datasets
 image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
 image_datasets_lbp = {x: datasets.ImageFolder(os.path.join(data_dir_lbp, x), data_transforms_lbp[x]) for x in ['train', 'test']}
+image_datasets_sobel = {x: datasets.ImageFolder(os.path.join(data_dir_sobel, x), data_transforms_sobel[x]) for x in ['train', 'test']}
 
 # Create combined datasets
-combined_datasets = {x: CombinedChannelDataset(image_datasets[x], image_datasets_lbp[x]) for x in ['train', 'test']}
+combined_datasets = {x: Combined5ChannelsDataset(image_datasets[x], image_datasets_lbp[x], image_datasets_sobel[x]) for x in ['train', 'test']}
 
 # Create data loaders
 batch_size = hyperparams.batch_size

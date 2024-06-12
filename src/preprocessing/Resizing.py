@@ -59,7 +59,7 @@ target_paths_df['Image_number'] = target_paths_df['path'].apply(lambda x: x.spli
 target_paths_df['Image_number'] = target_paths_df['Image_number'].str.replace(r'\D', '', regex=True)
 target_paths_df['Image_number'] = target_paths_df['Image_number'].astype(int)
 target_df = target_paths_df[(target_paths_df['Image_number'] >= 48) & (target_paths_df['Image_number'] <= 168)]
-val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 191)]
+val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 192)]
 
 def resize_img(image_path, output_directory):
     # Read the image
@@ -88,7 +88,7 @@ val_dst = base / "validation"
 
 #shutil.rmtree(train_dst)
 #shutil.rmtree(test_dst)
-#shutil.rmtree(val_dst)
+shutil.rmtree(val_dst)
 print('Directories removed')
 
 train_dst.mkdir(exist_ok=True)
