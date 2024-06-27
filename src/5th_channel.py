@@ -198,7 +198,7 @@ if not isExist:
 
 # Hyperparameters
 model_type = "DenseNet"
-architecture = 'densenet121'
+architecture = 'densenet264'
 hyperparams = Hyperparams(Path(base_path) / "data/train_conf_2.toml", str("5th_channel"), str(architecture))
 
 train_start_datetime = datetime.now()

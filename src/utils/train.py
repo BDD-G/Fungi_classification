@@ -25,6 +25,7 @@ def train(model, loader, optimizer, loss_fn, device):
         y = y.to(device)
         optimizer.zero_grad()
         y_pred = model(x)
+        #print(y)
         loss = loss_fn(y_pred, y)
         loss.backward()
 

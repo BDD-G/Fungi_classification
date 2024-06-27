@@ -31,7 +31,7 @@ from utils.ResNet import ResNet
 from utils.Hyperparams import Hyperparams
 from utils.train import  train, evaluate
 from utils.DenseNet import DenseNet
-from utils.CombineChannels import Combined5ChannelsDataset
+from utils.CombineChannels import Combined5ChannelsDataset, Combined4ChannelsDataset
 
 # Paths and classes
 img_path = '/work3/s220243/Thesis'
@@ -93,9 +93,9 @@ def load_model(architecture, model):
       else:
         param.requires_grad = False
   if model == "ResNet":
-    model = ResNet(model_parameters[architecture] , in_channels=5, num_classes=num_classes)
+    model = ResNet(model_parameters[architecture] , in_channels=4, num_classes=num_classes)
   if model == "DenseNet":
-     model = DenseNet(model_parameters[architecture] , in_channels=5, num_classes=num_classes)
+     model = DenseNet(model_parameters[architecture] , in_channels=4, num_classes=num_classes)
   return model    
 
 def epoch_time(start_time, end_time):
@@ -228,7 +228,8 @@ image_datasets_lbp = {x: datasets.ImageFolder(os.path.join(data_dir_lbp, x), dat
 image_datasets_sobel = {x: datasets.ImageFolder(os.path.join(data_dir_sobel, x), data_transforms_sobel[x]) for x in ['train', 'test']}
 
 # Create combined datasets
-combined_datasets = {x: Combined5ChannelsDataset(image_datasets[x], image_datasets_lbp[x], image_datasets_sobel[x]) for x in ['train', 'test']}
+#combined_datasets = {x: Combined5ChannelsDataset(image_datasets[x], image_datasets_lbp[x], image_datasets_sobel[x]) for x in ['train', 'test']} #5 channels
+combined_datasets = {x: Combined4ChannelsDataset(image_datasets[x], image_datasets_sobel[x]) for x in ['train', 'test']} #4 channels
 
 # Create data loaders
 batch_size = hyperparams.batch_size

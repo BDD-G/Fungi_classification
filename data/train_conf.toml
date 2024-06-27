@@ -1,8 +1,8 @@
 # TUNE
-batch_size = 32 # 128 | 64 | 32
-lr = 1e-4 # 1e-4 | 1e-3 | 1e-2
-optimizer = "SGD" # Adam | RMS | SGD | NAdam
-loss = "KLDIV" # CrossEntropy | NLL | KLDIV | BCE 
+batch_size = 128 # 128 | 64 | 32
+lr = 1e-5 # 1e-4 | 1e-3 | 1e-2
+optimizer = "Adam" # Adam | RMS | SGD | NAdam
+loss = "CrossEntropy" # CrossEntropy | NLL | KLDIV | BCE 
 
 # DON'T TUNE
 epochs = 1000
