@@ -31,6 +31,8 @@ from utils.ResNet import ResNet
 from utils.Hyperparams import Hyperparams
 from utils.train import  train, evaluate
 from utils.DenseNet import DenseNet
+from utils.CombineChannels import Combined5ChannelsDataset, Combined4ChannelsDataset
+from utils.ViT import MyViT
 
 # Paths and classes
 img_path = '/work3/s220243/Thesis'
@@ -49,25 +51,7 @@ model_parameters['densenet169'] = [6,12,32,32]
 model_parameters['densenet201'] = [6,12,48,32]
 model_parameters['densenet264'] = [6,12,64,48]
 
-# Helper functions
-class LBP:
-    def __init__(self, radius=1, n_points=8):
-        self.radius = radius
-        self.n_points = n_points
-
-    def __call__(self, image):
-        image_gray = rgb2gray(image)
-        image_gaussian = gaussian_filter(image_gray, sigma=0.5)
-        lbp_image = local_binary_pattern(image_gaussian, self.n_points, self.radius, method='uniform')
-
-        x = np.stack([lbp_image] * 3, axis=-1)
-        pseudo_rgb_image = (x-np.min(x))/(np.max(x)-np.min(x))
-        pseudo_rgb_image = (pseudo_rgb_image * 255).astype(np.uint8)  # Convert to uint8 for PIL compatibility
-        pseudo_rgb_image = Image.fromarray(pseudo_rgb_image)
-
-        return pseudo_rgb_image
-    
-def load_model(architecture, model):
+def load_model(architecture, model, num_channels):
   if architecture == 'pretrained':
     model = resnet50(weights=ResNet50_Weights.DEFAULT)
     model.fc = nn.Linear(1000, num_classes)
@@ -78,10 +62,38 @@ def load_model(architecture, model):
       else:
         param.requires_grad = False
   if model == "ResNet":
-    model = ResNet(model_parameters[architecture] , in_channels=3, num_classes=num_classes)
+    model = ResNet(model_parameters[architecture] , in_channels=num_channels, num_classes=num_classes)
   if model == "DenseNet":
-     model = DenseNet(model_parameters[architecture] , in_channels=3, num_classes=num_classes)
-  return model    
+     model = DenseNet(model_parameters[architecture] , in_channels=num_channels, num_classes=num_classes)
+  if model == "ViT":
+     model = MyViT((num_channels, 224, 224), n_patches=16, n_blocks=12, hidden_d=768, n_heads=12, out_d=num_classes).to(device)
+  return model
+
+def loaders(data_type):
+    match data_type:
+      case "Base":
+          image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+          dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
+          return dataloaders
+      case "4_LBP":
+          image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+          image_datasets_lbp = {x: datasets.ImageFolder(os.path.join(data_dir_lbp, x), data_transforms_lbp[x]) for x in ['train', 'test']}
+          combined_datasets = {x: Combined4ChannelsDataset(image_datasets[x], image_datasets_lbp[x]) for x in ['train', 'test']}
+          dataloaders = {x: torch.utils.data.DataLoader(combined_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
+          return dataloaders
+      case "4_Gradient":
+          image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+          image_datasets_sobel = {x: datasets.ImageFolder(os.path.join(data_dir_sobel, x), data_transforms_sobel[x]) for x in ['train', 'test']}
+          combined_datasets = {x: Combined4ChannelsDataset(image_datasets[x], image_datasets_sobel[x]) for x in ['train', 'test']}
+          dataloaders = {x: torch.utils.data.DataLoader(combined_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
+          return dataloaders
+      case "5_channels":
+          image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+          image_datasets_lbp = {x: datasets.ImageFolder(os.path.join(data_dir_lbp, x), data_transforms_lbp[x]) for x in ['train', 'test']}
+          image_datasets_sobel = {x: datasets.ImageFolder(os.path.join(data_dir_sobel, x), data_transforms_sobel[x]) for x in ['train', 'test']}
+          combined_datasets = {x: Combined5ChannelsDataset(image_datasets[x], image_datasets_lbp[x], image_datasets_sobel[x]) for x in ['train', 'test']}
+          dataloaders = {x: torch.utils.data.DataLoader(combined_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
+          return dataloaders  
 
 def epoch_time(start_time, end_time):
     elapsed_time = end_time - start_time
@@ -93,17 +105,53 @@ data_transforms = {
     'train': v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize([0.7306, 0.6204, 0.5511], [0.1087, 0.1948, 0.1759])
+        v2.Normalize([0.7323, 0.6161, 0.5441], [0.1147, 0.2005, 0.1777])
     ]),
     'test': v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize([0.7288, 0.6202, 0.5511], [0.1076, 0.1934, 0.1758])
+        v2.Normalize([0.7337, 0.6173, 0.5455], [0.1140, 0.2000, 0.1780])
     ]),
     'validation': v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
         v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ]),
+}
+
+data_transforms_lbp = {
+    'train': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.5791, 0.5791, 0.5791], [0.2315, 0.2315, 0.2315])
+    ]),
+    'test': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.5799, 0.5799, 0.5799], [0.2307, 0.2307, 0.2307])
+    ]),
+    'validation': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ]),
+}
+
+data_transforms_sobel = {
+    'train': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.1082, 0.1082, 0.1082], [0.1439, 0.1439, 0.1439])
+    ]),
+    'test': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.1087, 0.1087, 0.1087], [0.1448, 0.1448, 0.1448])
+    ]),
+    'validation': v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize([0.1244, 0.1244, 0.1244], [0.1425, 0.1425, 0.1425])
     ]),
 }
 
@@ -146,9 +194,9 @@ if not isExist:
     print("Created trained_models.csv")
 
 # Hyperparameters
-model_type = "DenseNet"
-architecture = 'densenet264'
-hyperparams = Hyperparams(Path(base_path) / "data/train_conf_2.toml", str("base"), str(architecture))
+model_type = "DenseNet" #Choose "ResNet" "DenseNet" or "ViT"
+architecture = 'densenet121' #Specify architecture
+hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("FullSet"), str(architecture))
 
 train_start_datetime = datetime.now()
 
@@ -160,28 +208,41 @@ recall_epoch = []
 precision_epoch = []
 acc_epoch = []
 
-# Define the data directory
-data_dir = Path(img_path) / 'data_split_resized'
+# Define the base data directory
+data_dir = Path(img_path) / 'full_dataset_resized'
 
-# Create data loaders
-batch_size = hyperparams.batch_size
+# Define the lbp data directory
+data_dir_lbp = Path(img_path) / 'data_split_lbp'
+
+# Define the sobel data directory
+data_dir_sobel = Path(img_path) / 'data_split_sobel'
+
+## Dataloaders
+
 image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
+image_datasets_lbp = {x: datasets.ImageFolder(os.path.join(data_dir_lbp, x), data_transforms_lbp[x]) for x in ['train', 'test']}
+image_datasets_sobel = {x: datasets.ImageFolder(os.path.join(data_dir_sobel, x), data_transforms_sobel[x]) for x in ['train', 'test']}
 
-dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True) for x in ['train', 'test']}
+batch_size = hyperparams.batch_size
+
+#"Base" - base_imgaes, "4_LBP" - LBP as 4th channel, "4_Gradient" - Image gradient as 4th channel, "5_channels" - both LBP and Gradient
+dataloaders = loaders("Base")  
+
+# Get dataset sizes
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 print(dataset_sizes)
 
+# Class names
 class_names = image_datasets['train'].classes
 
-# Define the architecture
-architecture = 'densenet169'
+
 num_classes = len(class_names)
-model = load_model(architecture, model_type) #use architecture for training a full model
+model = load_model(architecture, model_type, num_channels = 3)
 
 # Hyperparameters
 num_epochs = hyperparams.epochs
 lr = hyperparams.lr
-early_stopping_patience = 10
+early_stopping_patience = 15
 optimizer = hyperparams.optimizer_class(model.parameters(), lr=lr)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
 loss_fn = hyperparams.loss_fn
@@ -249,8 +310,6 @@ train_mins, train_secs = epoch_time(train_start, train_end)
 data_str = f'Training completed:\n'
 data_str += f'\tEpochs: \t{trained_epochs}\n'
 data_str += f'\tTraining Time: \t{train_mins}m {train_secs}s\n'
-# data_str += f'\tTrain Loss: \t{train_loss:.3f}\n'
-# data_str += f'\t Test. Loss: \t{test_loss:.3f}\n'
 print(data_str)
 
 # Save results
@@ -272,7 +331,6 @@ dict_to_append = {
 }
 
 new_row = pd.DataFrame.from_dict(dict_to_append)
-# trained_models_df = pd.concat([trained_models_df, new_row], ignore_index=True)
 new_row.to_csv(TRAINED_MODELS_CSV, mode='a', header=False)
 
 # Save model 
@@ -343,6 +401,6 @@ def plot_training(training_losses,
 
     return fig
 
-
+#Save learning curve
 fig = plot_training(train_losses, test_losses, gaussian=True, sigma=1, figsize=(4,4))
 plt.savefig('/zhome/ac/d/174101/thesis/plots/'+str(hyperparams.model_name())+'.jpg')

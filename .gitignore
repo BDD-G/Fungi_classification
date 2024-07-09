@@ -3,6 +3,12 @@
 *.txt
 *.err
 *.out
+*.csv
 # notes
 notes.ipynb
-
+main_ViT.py
+main_ViT_2.py
+main_LBP.py
+main_2.py
+5th_channel.py
+4th_channel.py

@@ -37,8 +37,8 @@ print("Device set")
 
 # Load the pre-trained model
 base_path = '/work3/s220243/Thesis'
-data_dir = Path(base_path) / 'data_split_resized'
-model_name = "fungi_DenseNet_base_B32_E1000_lr1.000e-04_Adam_KLDIV.pth" #specify a model
+data_dir = Path(base_path) / 'full_dataset_resized'
+model_name = "fungi_densenet121_Full_B32_E1000_lr1.000e-04_Adam_KLDIV.pth" #specify a model
 checkpoint_path = Path(base_path) / f"models/{model_name}" 
 
 print("Paths set")
@@ -59,12 +59,12 @@ data_transforms = {
     'train': v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize([0.7306, 0.6204, 0.5511], [0.1087, 0.1948, 0.1759]) #Resized
+        v2.Normalize([0.7323, 0.6161, 0.5441], [0.1147, 0.2005, 0.1777]) #Resized
     ]),
     'validation': v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=True),
-        v2.Normalize([0.7129, 0.6080, 0.5386], [0.1165, 0.1868, 0.1702]) #Resized
+        v2.Normalize([0.7186, 0.6085, 0.5382], [0.1204, 0.1915, 0.1695]) #Resized
     ]),
 }
 
@@ -100,6 +100,7 @@ async def predict(request: Request, file: UploadFile = File(...)):
     try:
         image_bytes = await file.read()
         image = Image.open(io.BytesIO(image_bytes))
+        image = image.resize((500,750))
         image_path = f"static/{file.filename}"
         image.save(image_path)
 
@@ -108,8 +109,8 @@ async def predict(request: Request, file: UploadFile = File(...)):
         outputs = model(tensor)
         
         # Apply sigmoid activation and convert to percentages
-        #probabilities = torch.sigmoid(outputs) * 100.0
-        probabilities = torch.nn.functional.softmax(outputs, dim=1) * 100.0
+        probabilities = torch.sigmoid(outputs) * 100.0
+        #probabilities = torch.nn.functional.softmax(outputs, dim=1) * 100.0
         
         # Get top 5 predictions
         top5_prob, top5_catid = torch.topk(probabilities, 5)

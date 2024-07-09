@@ -59,12 +59,17 @@ target_paths_df['Image_number'] = target_paths_df['path'].apply(lambda x: x.spli
 target_paths_df['Image_number'] = target_paths_df['Image_number'].str.replace(r'\D', '', regex=True)
 target_paths_df['Image_number'] = target_paths_df['Image_number'].astype(int)
 target_df = target_paths_df[(target_paths_df['Image_number'] >= 48) & (target_paths_df['Image_number'] <= 168)]
-val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 192)]
+val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 191)]
 
 def resize_img(image_path, output_directory):
     # Read the image
     image = cv2.imread(image_path)
     
+    # Check if the image is None (i.e., failed to read)
+    if image is None:
+        print(f"Warning: Failed to read image {image_path}. Skipping.")
+        return
+
     # Resize
     resized_image = resize(image, (224,224), anti_aliasing=True)
 
@@ -78,7 +83,7 @@ def resize_img(image_path, output_directory):
     output_path = join(output_directory, file_name)
     cv2.imwrite(output_path, resized_image_unit8)
 
-base = Path(f"{img_path}/data_split_resized")
+base = Path(f"{img_path}/full_dataset_resized")
 base.mkdir(exist_ok=True)
 
 # Create train-test split folders
@@ -88,7 +93,7 @@ val_dst = base / "validation"
 
 #shutil.rmtree(train_dst)
 #shutil.rmtree(test_dst)
-shutil.rmtree(val_dst)
+#shutil.rmtree(val_dst)
 print('Directories removed')
 
 train_dst.mkdir(exist_ok=True)
