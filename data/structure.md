@@ -1,3 +1,6 @@
+The directory structure of the project looks like this:
+```txt
+
 ├── README.md                       <- The top-level README for developers using this project.
 ├── data                            <- Basic data - configuration files, label files.
 │
@@ -40,3 +43,4 @@
 │   │
 │   └── main.py                     <- Script for training the model.
 └── LICENSE                         <- Open-source license.
+'''
