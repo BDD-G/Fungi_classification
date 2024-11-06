@@ -24,7 +24,7 @@ def train(model, loader, optimizer, loss_fn, device):
         #y = y.to(device, dtype=torch.int64)
         y = y.to(device)
         optimizer.zero_grad()
-        y_pred = model(x)
+        y_pred = model(x).logits
         #print(y)
         loss = loss_fn(y_pred, y)
         loss.backward()
@@ -53,7 +53,7 @@ def evaluate(model, loader, loss_fn, device):
             x = x.to(device)
             y = y.to(device)
 
-            y_pred = model(x)
+            y_pred = model(x).logits
             loss = loss_fn(y_pred, y)
             epoch_loss += loss.item()
             

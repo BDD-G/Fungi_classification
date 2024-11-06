@@ -103,8 +103,14 @@ def epoch_time(start_time, end_time):
 
 data_transforms = {
     'train': v2.Compose([
-        v2.ToImage(),
-        v2.ToDtype(torch.float32, scale=True),
+        v2.ToPILImage(),
+        v2.RandomHorizontalFlip(),
+        v2.RandomVerticalFlip(),
+        v2.RandomRotation(degrees=15),
+        v2.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
+        v2.RandomGrayscale(p=0.1),
+        v2.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5)),
+        v2.ToTensor(),
         v2.Normalize([0.7340, 0.6176, 0.5459], [0.1140, 0.2001, 0.1781])
     ]),
     'test': v2.Compose([
@@ -196,7 +202,7 @@ if not isExist:
 # Hyperparameters
 model_type = "DenseNet" #Choose "ResNet" "DenseNet" or "ViT"
 architecture = 'densenet121' #Specify architecture
-hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("Full"), str(architecture))
+hyperparams = Hyperparams(Path(base_path) / "data/train_conf.toml", str("GPT4o"), str(architecture))
 
 train_start_datetime = datetime.now()
 
@@ -403,4 +409,4 @@ def plot_training(training_losses,
 
 #Save learning curve
 fig = plot_training(train_losses, test_losses, gaussian=True, sigma=1, figsize=(4,4))
-plt.savefig('/zhome/ac/d/174101/thesis/plots/Learning-Curves/'+str(hyperparams.model_name())+'.jpg')
+plt.savefig('/zhome/ac/d/174101/thesis/plots/Learning_Curves/'+str(hyperparams.model_name())+'.jpg')

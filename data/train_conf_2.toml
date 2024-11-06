@@ -1,6 +1,6 @@
 # TUNE
-batch_size = 64 # 128 | 64 | 32
-lr = 1e-5 # 1e-4 | 1e-3 | 1e-2
+batch_size = 16 # 128 | 64 | 32
+lr = 1e-4 # 1e-4 | 1e-3 | 1e-2
 optimizer = "Adam" # Adam | RMS | SGD | NAdam
 loss = "CrossEntropy" # CrossEntropy | NLL | KLDIV | BCE 
 

@@ -5,10 +5,13 @@
 *.out
 *.csv
 # notes
-notes.ipynb
 main_ViT.py
 main_ViT_2.py
 main_LBP.py
 main_2.py
 5th_channel.py
 4th_channel.py
+main_2.py
+main_3.py
+main_4.py
+main_5.py

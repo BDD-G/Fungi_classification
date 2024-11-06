@@ -59,7 +59,7 @@ target_paths_df['Image_number'] = target_paths_df['path'].apply(lambda x: x.spli
 target_paths_df['Image_number'] = target_paths_df['Image_number'].str.replace(r'\D', '', regex=True)
 target_paths_df['Image_number'] = target_paths_df['Image_number'].astype(int)
 target_df = target_paths_df[(target_paths_df['Image_number'] >= 48) & (target_paths_df['Image_number'] <= 168)]
-val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 191)]
+val_df = target_paths_df[(target_paths_df['Image_number'] > 168) & (target_paths_df['Image_number'] <= 335)]
 
 def resize_img(image_path, output_directory):
     # Read the image
@@ -83,7 +83,7 @@ def resize_img(image_path, output_directory):
     output_path = join(output_directory, file_name)
     cv2.imwrite(output_path, resized_image_unit8)
 
-base = Path(f"{img_path}/full_dataset_resized")
+base = Path(f"{img_path}/all_validation_images")
 base.mkdir(exist_ok=True)
 
 # Create train-test split folders

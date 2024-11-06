@@ -12,6 +12,7 @@ from torchvision.transforms import v2
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
+from torch.profiler import profile, record_function, ProfilerActivity
 
 # Jinja2 templates setup
 templates = Jinja2Templates(directory="templates")
@@ -87,7 +88,7 @@ def transform_image(image_bytes):
     my_transforms = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.7306, 0.6204, 0.5511], [0.1087, 0.1948, 0.1759])
+        transforms.Normalize([0.7186, 0.6085, 0.5382], [0.1204, 0.1915, 0.1695])
     ])
     image = Image.open(io.BytesIO(image_bytes))
     return my_transforms(image).unsqueeze(0)
@@ -106,6 +107,13 @@ async def predict(request: Request, file: UploadFile = File(...)):
 
         
         tensor = transform_image(image_bytes)
+        with profile(activities=[ProfilerActivity.CPU],
+            profile_memory=True, record_shapes=True) as prof:
+                model(tensor)
+
+        print(prof.key_averages().table(sort_by="self_cpu_memory_usage", row_limit=10))
+
+        
         outputs = model(tensor)
         
         # Apply sigmoid activation and convert to percentages
